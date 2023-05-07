@@ -1,5 +1,7 @@
+use std::ffi::OsStr;
 use std::io;
 use std::path;
+use std::process::Command;
 
 use crate::commands::{quit, reload};
 use crate::config::ProgramEntry;
@@ -72,7 +74,9 @@ fn _open_with_xdg(
         open::that_in_background(path);
     } else {
         backend.terminal_drop();
-        let result = open::that(path);
+        let result = Command::new("handlr")
+            .args([OsStr::new("open"), path.as_ref()])
+            .output();
         backend.terminal_restore()?;
         result?;
     }
