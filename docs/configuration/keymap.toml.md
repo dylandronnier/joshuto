@@ -269,10 +269,16 @@ function joshuto() {
 
 - `--foreground=true`: will delete files in the foreground
 - `--permanently`: force permanent deletion regardless of `use_trash` value.
+- `--noconfirm`: files will be deleted without asking for confirmation
+  (can be dangerous when `use_trash` is `false`)
 - will **_permanently_** delete files if `use_trash` is `false` in
   [joshuto.toml](https://github.com/kamiyaa/joshuto)/wiki/Configuration#joshutotoml)
-- if `use_trash` is `true`, this might cause issues with deleting files
-  on mounted filesystems such as on an external hard drive or tmpfs
+- if `use_trash` is `true`, `joshuto` will try to use
+  the following command-line tools to try to put the files in the trash can instead
+  of permanently deleting them
+  - `gio trash`
+  - `trash-put`: https://github.com/andreafrancia/trash-cli
+  - `trash`
 
 ### `rename`: rename the current file the cursor is on
 
@@ -280,8 +286,12 @@ function joshuto() {
 
 ### `rename_append`: opens the command prompt with the rename command and the current file name filled in.
 
-- cursor will be set right before the extension of the file
-  (end of file name if no extension)
+- cursor will be set to the end of the file name
+
+### `rename_append_base`: opens the command prompt with the rename command and the current file name filled in.
+
+- cursor will be set right after the base name of the file.
+  (beginning of the file name if no base name)
 
 ### `rename_prepend`: opens the command prompt with the rename command and the current file name filled in.
 
@@ -309,11 +319,13 @@ function joshuto() {
 
 ### `search`: search the current directory via a string
 
-- case insensitive
-
-### `search_glob`: search the current directory via shell globbing
+### `search_glob`: search the current directory via shell globbing (exact match)
 
 - `:search_glob *.png`
+
+### `search_regex`: search the current directory via regex (exact match)
+
+- `:search_regex .+\.(jpg|png|gif)`
 
 ### `search_next`: go to next search result in the current directory
 
@@ -326,8 +338,8 @@ function joshuto() {
 - `--deselect=true`: deselect rather than select the entry
 - `--all=true`: select/deselect/toggle all _visible_ files in the current view.
   (Files not visible due to a set filter are not affected.)
-- `glob`: select files based on glob (just like `search_glob`)
-  - `select *.png`
+- when a pattern is given, joshuto selects files whose names contain the pattern
+  - `select png`
 
 This example keybinding can be used for *de*selecting all files:
 
@@ -337,18 +349,61 @@ keymap = [ //..
 ]
 ```
 
-### `filter`:Case insensitively filter the current directory list.
+### `select_glob`: select files in the current directory via globbing (exact match)
+
+- `:select_glob --toggle=false '*.png'`
+
+This command has the same options for `select`. Notice that it's necessary to quote the pattern when spaces are contained.
+
+### `select_regex`: select files in the current directory via regex (exact match)
+
+- `:select_regex --toggle=false '.+\.(jpg|png|gif)'`
+
+This command has the same options for `select`. Notice that it's necessary to quote the pattern when spaces and `\` are contained.
+
+### `select_fzf`: select files in the current directory via fzf
+
+This command has the same options for `select`. Use tab to select or deselect files in fzf. 
+
+### `filter`: filter the current directory list.
 
 - `:filter ca`: filter the current directory and show only items with `ca` in the name
 
-### `toggle_visual`: Enables or disables “visual mode”.
+### `filter_glob`: filter the current directory list via globbing.
+
+- `:filter_glob *.png`
+
+### `filter_regex`: filter the current directory list via regex.
+
+- `:filter_regex .+\.(jpg|png|gif)`
+
+### `toggle_visual`: enables or disables “visual mode”.
 
 When disabling, the current “visual mode selection” is turned into normal selection.
 (See also [Visual Mode](../misc.md#visual-mode).)
 
-### `escape`: Leave visual mode and withdraw the visual-mode-selection.
+### `escape`: leave visual mode and withdraw the visual-mode-selection.
 
 (See also [Visual Mode](../misc.md#visual-mode).)
+
+### `set_case_sensitivity`: set case sensitivity for different search operations.
+
+- Options
+  - `--type=string`: change configurations of operations using substring matching
+  - `--type=glob`: change configurations of operations using glob matching
+  - `--type=regex`: change configurations of operations using regex
+  - `--type=fzf`: change configurations of operations using fzf 
+  - when no option is added, type is set to `string` by default
+- Value
+  - `insensitive`
+  - `sensitive`
+  - `smart`
+
+An example:
+
+```
+:set_case_sensitivity --type=fzf sensitive
+```
 
 ## Bookmarks
 

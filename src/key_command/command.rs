@@ -1,7 +1,14 @@
 use std::path;
 
+use crate::commands::case_sensitivity::SetType;
 use crate::commands::quit::QuitAction;
-use crate::config::option::{LineMode, LineNumberStyle, NewTabMode, SelectOption, SortType};
+use crate::commands::select::SelectOption;
+use crate::config::clean::app::display::line_mode::LineMode;
+use crate::config::clean::app::display::line_number::LineNumberStyle;
+use crate::config::clean::app::display::new_tab::NewTabMode;
+use crate::config::clean::app::display::sort_type::SortType;
+use crate::config::clean::app::search::CaseSensitivity;
+use crate::config::clean::app::tab::TabBarDisplayMode;
 use crate::io::FileOperationOptions;
 
 #[derive(Clone, Debug)]
@@ -26,7 +33,9 @@ pub enum Command {
     CopyFiles,
     CopyFileName,
     CopyFileNameWithoutExtension,
-    CopyFilePath,
+    CopyFilePath {
+        all_selected: bool,
+    },
     CopyDirPath,
     SymlinkFiles {
         relative: bool,
@@ -38,6 +47,7 @@ pub enum Command {
     DeleteFiles {
         background: bool,
         permanently: bool,
+        noconfirm: bool,
     },
 
     CursorMoveUp {
@@ -86,6 +96,7 @@ pub enum Command {
         new_name: path::PathBuf,
     },
     RenameFileAppend,
+    RenameFileAppendBase,
     RenameFilePrepend,
     RenameFileKeepExt,
     TouchFile {
@@ -93,6 +104,9 @@ pub enum Command {
     },
 
     SearchGlob {
+        pattern: String,
+    },
+    SearchRegex {
         pattern: String,
     },
     SearchString {
@@ -104,9 +118,22 @@ pub enum Command {
     SearchNext,
     SearchPrev,
 
-    SelectFiles {
+    SelectGlob {
         pattern: String,
         options: SelectOption,
+    },
+    SelectRegex {
+        pattern: String,
+        options: SelectOption,
+    },
+    SelectString {
+        pattern: String,
+        options: SelectOption,
+    },
+
+    SetCaseSensitivity {
+        case_sensitivity: CaseSensitivity,
+        set_type: SetType,
     },
     SetMode,
     SubProcess {
@@ -128,10 +155,17 @@ pub enum Command {
     Sort(SortType),
     SortReverse,
 
-    Filter {
+    FilterGlob {
+        pattern: String,
+    },
+    FilterRegex {
+        pattern: String,
+    },
+    FilterString {
         pattern: String,
     },
 
+    SetTabBarDisplayMode(TabBarDisplayMode),
     NewTab {
         mode: NewTabMode,
     },
@@ -146,6 +180,9 @@ pub enum Command {
 
     SearchFzf,
     SubdirFzf,
+    SelectFzf {
+        options: SelectOption,
+    },
     Zoxide(String),
     ZoxideInteractive,
 

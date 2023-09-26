@@ -7,7 +7,7 @@ use ratatui::layout::{Constraint, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::widgets::{Cell, Row, Table, Widget};
 
-use crate::config::KeyMapping;
+use crate::config::clean::keymap::KeyMapping;
 use crate::key_command::traits::CommandComment;
 use crate::key_command::CommandKeybind;
 
@@ -124,7 +124,14 @@ pub fn get_raw_keymap_table<'a>(
     for (event, bind) in keymap.iter() {
         let key = key_event_to_string(event);
         let (command, comment) = match bind {
-            CommandKeybind::SimpleKeybind(command) => (format!("{}", command), command.comment()),
+            CommandKeybind::SimpleKeybind {
+                commands,
+                description: Some(desc),
+            } => (format!("{}", commands[0]), desc.as_str()),
+            CommandKeybind::SimpleKeybind {
+                commands,
+                description: None,
+            } => (format!("{}", commands[0]), commands[0].comment()),
             CommandKeybind::CompositeKeybind(sub_keymap) => {
                 let mut sub_rows = get_raw_keymap_table(sub_keymap, "", sort_by);
                 for _ in 0..sub_rows.len() {

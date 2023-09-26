@@ -4,15 +4,14 @@ use std::sync::mpsc;
 use std::thread;
 
 use crate::commands::quit::QuitAction;
-use crate::config;
+use crate::config::clean::app::AppConfig;
 use crate::context::{
-    CommandLineContext, LocalStateContext, MessageQueue, PreviewContext, TabContext, UiContext,
-    WorkerContext,
+    CommandLineContext, LocalStateContext, MatchContext, MessageQueue, PreviewContext, TabContext,
+    UiContext, WorkerContext,
 };
 use crate::event::{AppEvent, Events};
 use crate::ui::views;
 use crate::ui::PreviewArea;
-use crate::util::search::SearchPattern;
 use crate::Args;
 use notify::{RecursiveMode, Watcher};
 use std::path;
@@ -24,13 +23,13 @@ pub struct AppContext {
     // args from the command line
     pub args: Args,
     // app config
-    config: config::AppConfig,
+    config: AppConfig,
     // context related to tabs
     tab_context: TabContext,
     // context related to local file state
     local_state: Option<LocalStateContext>,
     // context related to searching
-    search_context: Option<SearchPattern>,
+    search_context: Option<MatchContext>,
     // message queue for displaying messages
     message_queue: MessageQueue,
     // context related to io workers
@@ -51,7 +50,7 @@ pub struct AppContext {
 }
 
 impl AppContext {
-    pub fn new(config: config::AppConfig, args: Args) -> Self {
+    pub fn new(config: AppConfig, args: Args) -> Self {
         let events = Events::new();
         let event_tx = events.event_tx.clone();
 
@@ -71,7 +70,7 @@ impl AppContext {
             quit: QuitAction::DoNot,
             events,
             args,
-            tab_context: TabContext::new(),
+            tab_context: TabContext::new(config.tab_options_ref().display),
             local_state: None,
             search_context: None,
             message_queue: MessageQueue::new(),
@@ -217,10 +216,10 @@ impl AppContext {
         self.events.event_tx.clone()
     }
 
-    pub fn config_ref(&self) -> &config::AppConfig {
+    pub fn config_ref(&self) -> &AppConfig {
         &self.config
     }
-    pub fn config_mut(&mut self) -> &mut config::AppConfig {
+    pub fn config_mut(&mut self) -> &mut AppConfig {
         &mut self.config
     }
 
@@ -246,11 +245,11 @@ impl AppContext {
         self.local_state.take()
     }
 
-    pub fn get_search_context(&self) -> Option<&SearchPattern> {
+    pub fn get_search_context(&self) -> Option<&MatchContext> {
         self.search_context.as_ref()
     }
-    pub fn set_search_context(&mut self, pattern: SearchPattern) {
-        self.search_context = Some(pattern);
+    pub fn set_search_context(&mut self, context: MatchContext) {
+        self.search_context = Some(context);
     }
 
     pub fn preview_context_ref(&self) -> &PreviewContext {

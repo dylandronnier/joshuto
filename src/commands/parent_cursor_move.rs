@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
 use crate::context::AppContext;
-use crate::error::JoshutoResult;
+use crate::error::AppResult;
 
-pub fn parent_cursor_move(context: &mut AppContext, new_index: usize) -> JoshutoResult {
+pub fn parent_cursor_move(context: &mut AppContext, new_index: usize) -> AppResult {
     let mut path: Option<PathBuf> = None;
     let mut new_index = new_index;
 
@@ -31,7 +31,7 @@ pub fn parent_cursor_move(context: &mut AppContext, new_index: usize) -> Joshuto
     Ok(())
 }
 
-pub fn parent_up(context: &mut AppContext, u: usize) -> JoshutoResult {
+pub fn parent_up(context: &mut AppContext, u: usize) -> AppResult {
     let movement = context
         .tab_context_ref()
         .curr_tab_ref()
@@ -45,11 +45,13 @@ pub fn parent_up(context: &mut AppContext, u: usize) -> JoshutoResult {
     Ok(())
 }
 
-pub fn parent_down(context: &mut AppContext, u: usize) -> JoshutoResult {
-    let movement = match context.tab_context_ref().curr_tab_ref().parent_list_ref() {
-        Some(list) => list.get_index().map(|idx| idx + u),
-        None => None,
-    };
+pub fn parent_down(context: &mut AppContext, u: usize) -> AppResult {
+    let movement = context
+        .tab_context_ref()
+        .curr_tab_ref()
+        .parent_list_ref()
+        .and_then(|list| list.get_index().map(|idx| idx + u));
+
     if let Some(s) = movement {
         parent_cursor_move(context, s)?;
     }

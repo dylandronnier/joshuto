@@ -14,22 +14,28 @@ mod traits;
 mod ui;
 mod util;
 
-use lazy_static::lazy_static;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::PathBuf;
 use std::process;
 use std::sync::Mutex;
-use structopt::StructOpt;
+
+use clap::{CommandFactory, Parser, Subcommand};
+use config::clean::app::AppConfig;
+use config::clean::icon::Icons;
+use config::clean::keymap::AppKeyMapping;
+use config::clean::preview::FileEntryPreview;
+use lazy_static::lazy_static;
+
+use config::clean::bookmarks::Bookmarks;
+use config::clean::mimetype::AppProgramRegistry;
+use config::clean::theme::AppTheme;
+use config::TomlConfigFile;
 
 use crate::commands::quit::QuitAction;
 
-use crate::config::{
-    icons::Icons, AppConfig, AppKeyMapping, AppProgramRegistry, AppTheme, Bookmarks,
-    JoshutoPreview, TomlConfigFile,
-};
 use crate::context::AppContext;
-use crate::error::JoshutoError;
+use crate::error::AppError;
 
 const PROGRAM_NAME: &str = "joshuto";
 const CONFIG_HOME: &str = "JOSHUTO_CONFIG_HOME";
@@ -70,7 +76,7 @@ lazy_static! {
     };
     static ref THEME_T: AppTheme = AppTheme::get_config(THEME_FILE);
     static ref MIMETYPE_T: AppProgramRegistry = AppProgramRegistry::get_config(MIMETYPE_FILE);
-    static ref PREVIEW_T: JoshutoPreview = JoshutoPreview::get_config(PREVIEW_FILE);
+    static ref PREVIEW_T: FileEntryPreview = FileEntryPreview::get_config(PREVIEW_FILE);
     static ref BOOKMARKS_T: Mutex<Bookmarks> = Mutex::new(Bookmarks::get_config(BOOKMARKS_FILE));
     static ref ICONS_T: Icons = Icons::get_config(ICONS_FILE);
 
@@ -88,30 +94,57 @@ lazy_static! {
     };
 }
 
-#[derive(Clone, Debug, StructOpt)]
+#[derive(Clone, Debug, Parser)]
+#[command(author, about)]
 pub struct Args {
-    #[structopt(short = "v", long = "version")]
+    #[command(subcommand)]
+    commands: Option<Commands>,
+
+    #[arg(short = 'v', long = "version")]
     version: bool,
-    #[structopt(long = "change-directory")]
+
+    #[arg(long = "change-directory")]
     change_directory: bool,
-    #[structopt(long = "file-chooser")]
+
+    #[arg(long = "file-chooser")]
     file_chooser: bool,
-    #[structopt(long = "output-file", parse(from_os_str))]
+
+    #[arg(long = "output-file")]
     output_file: Option<PathBuf>,
-    #[structopt(name = "ARGUMENTS")]
-    rest: Vec<String>,
+
+    #[arg(name = "ARGUMENTS")]
+    rest: Vec<PathBuf>,
 }
 
-fn run_main(args: Args) -> Result<i32, JoshutoError> {
-    if args.version {
-        let version = env!("CARGO_PKG_VERSION");
-        println!("{}-{}", PROGRAM_NAME, version);
-        return Ok(0);
+#[derive(Clone, Debug, Subcommand)]
+pub enum Commands {
+    #[command(about = "Show shell completions")]
+    Completions { shell: clap_complete::Shell },
+
+    #[command(about = "Show version")]
+    Version,
+}
+
+fn run_main(args: Args) -> Result<i32, AppError> {
+    if let Some(command) = args.commands {
+        match command {
+            Commands::Completions { shell } => {
+                let mut app = Args::command();
+                let bin_name = app.get_name().to_string();
+                clap_complete::generate(shell, &mut app, bin_name, &mut std::io::stdout());
+                return Ok(0);
+            }
+            Commands::Version => return print_version(),
+        }
     }
-    if !args.rest.is_empty() {
-        let p = PathBuf::from(args.rest[0].as_str());
-        if let Err(e) = std::env::set_current_dir(p.as_path()) {
-            eprintln!("{}", e);
+
+    if args.version {
+        return print_version();
+    }
+
+    if let Some(path) = args.rest.first() {
+        if let Err(err) = std::env::set_current_dir(path) {
+            eprintln!("{err}");
             process::exit(1);
         }
     }
@@ -138,7 +171,7 @@ fn run_main(args: Args) -> Result<i32, JoshutoError> {
     Ok(context.quit.exit_code())
 }
 
-fn run_quit(args: &Args, context: &AppContext) -> Result<(), JoshutoError> {
+fn run_quit(args: &Args, context: &AppContext) -> Result<(), AppError> {
     match &args.output_file {
         Some(output_path) => match context.quit {
             QuitAction::OutputCurrentDirectory => {
@@ -184,14 +217,50 @@ fn run_quit(args: &Args, context: &AppContext) -> Result<(), JoshutoError> {
     Ok(())
 }
 
+fn print_version() -> Result<i32, AppError> {
+    let version = env!("CARGO_PKG_VERSION");
+    writeln!(&mut std::io::stdout(), "{PROGRAM_NAME}-{version}")?;
+    Ok(0)
+}
+
 fn main() {
-    let args = Args::from_args();
+    let args = Args::parse();
 
     match run_main(args) {
         Ok(exit_code) => process::exit(exit_code),
         Err(e) => {
             eprintln!("{}", e);
             process::exit(1);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use clap::Parser;
+
+    use crate::{Args, Commands};
+
+    #[test]
+    fn test_command_new() {
+        Args::parse_from(["program_name"]);
+    }
+
+    #[test]
+    fn test_command_version() {
+        match Args::parse_from(["program_name", "version"]).commands {
+            Some(Commands::Version) => (),
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn test_command_completions() {
+        for shell in ["bash", "zsh", "fish", "elvish", "powershell"] {
+            match Args::parse_from(["program_name", "completions", shell]).commands {
+                Some(Commands::Completions { shell: _ }) => {}
+                _ => panic!(),
+            }
         }
     }
 }

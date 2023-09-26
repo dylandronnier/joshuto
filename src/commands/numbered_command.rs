@@ -1,9 +1,9 @@
 use termion::event::{Event, Key};
 
 use crate::commands::cursor_move;
-use crate::config::AppKeyMapping;
+use crate::config::clean::keymap::AppKeyMapping;
 use crate::context::AppContext;
-use crate::error::{JoshutoError, JoshutoErrorKind, JoshutoResult};
+use crate::error::{AppError, AppErrorKind, AppResult};
 use crate::event::process_event;
 use crate::event::AppEvent;
 use crate::key_command::{CommandKeybind, NumberedExecute};
@@ -15,7 +15,7 @@ pub fn numbered_command(
     backend: &mut AppBackend,
     keymap: &AppKeyMapping,
     first_char: char,
-) -> JoshutoResult {
+) -> AppResult {
     context.flush_event();
     let mut prefix = String::from(first_char);
 
@@ -33,8 +33,8 @@ pub fn numbered_command(
             Ok(n) => n,
             Err(_) => {
                 context.message_queue_mut().pop_front();
-                return Err(JoshutoError::new(
-                    JoshutoErrorKind::ParseError,
+                return Err(AppError::new(
+                    AppErrorKind::ParseError,
                     "Number is too big".to_string(),
                 ));
             }
@@ -52,12 +52,15 @@ pub fn numbered_command(
                         prefix.push(c);
                     }
                     key => match keymap.default_view.get(&key) {
-                        Some(CommandKeybind::SimpleKeybind(command)) => {
-                            return command.numbered_execute(num_prefix, context, backend, keymap);
+                        Some(CommandKeybind::SimpleKeybind { commands, .. }) => {
+                            for command in commands {
+                                let _ =
+                                    command.numbered_execute(num_prefix, context, backend, keymap);
+                            }
                         }
                         _ => {
-                            return Err(JoshutoError::new(
-                                JoshutoErrorKind::UnrecognizedCommand,
+                            return Err(AppError::new(
+                                AppErrorKind::UnrecognizedCommand,
                                 "Command cannot be prefixed by a number or does not exist"
                                     .to_string(),
                             ));

@@ -1,8 +1,7 @@
-use crate::commands::*;
-use crate::config::AppKeyMapping;
 use crate::context::AppContext;
-use crate::error::JoshutoResult;
+use crate::error::AppResult;
 use crate::ui::AppBackend;
+use crate::{commands::*, config::clean::keymap::AppKeyMapping};
 
 use super::{AppExecute, Command};
 
@@ -12,7 +11,7 @@ impl AppExecute for Command {
         context: &mut AppContext,
         backend: &mut AppBackend,
         keymap_t: &AppKeyMapping,
-    ) -> JoshutoResult {
+    ) -> AppResult {
         match self {
             Self::Escape => escape::escape(context),
             Self::ToggleVisualMode => uimodes::toggle_visual_mode(context),
@@ -41,7 +40,10 @@ impl AppExecute for Command {
             Self::CopyFileNameWithoutExtension => {
                 file_ops::copy_filename_without_extension(context)
             }
-            Self::CopyFilePath => file_ops::copy_filepath(context),
+            Self::CopyFilePath {
+                all_selected: false,
+            } => file_ops::copy_filepath(context, false),
+            Self::CopyFilePath { all_selected: true } => file_ops::copy_filepath(context, true),
             Self::CopyDirPath => file_ops::copy_dirpath(context),
             Self::SymlinkFiles { relative: true } => file_ops::symlink_relative(context),
             Self::SymlinkFiles { relative: false } => file_ops::symlink_absolute(context),
@@ -50,7 +52,14 @@ impl AppExecute for Command {
             Self::DeleteFiles {
                 background,
                 permanently,
-            } => delete_files::delete_selected_files(context, backend, *background, *permanently),
+                noconfirm,
+            } => delete_files::delete_selected_files(
+                context,
+                backend,
+                *background,
+                *permanently,
+                *noconfirm,
+            ),
 
             Self::CursorMoveUp { offset } => cursor_move::up(context, *offset),
             Self::CursorMoveDown { offset } => cursor_move::down(context, *offset),
@@ -89,12 +98,16 @@ impl AppExecute for Command {
             Self::ReloadDirList => reload::reload_dirlist(context),
             Self::RenameFile { new_name } => rename_file::rename_file(context, new_name.as_path()),
             Self::RenameFileAppend => rename_file::rename_file_append(context, backend, keymap_t),
+            Self::RenameFileAppendBase => {
+                rename_file::rename_file_append_base(context, backend, keymap_t)
+            }
             Self::RenameFilePrepend => rename_file::rename_file_prepend(context, backend, keymap_t),
             Self::RenameFileKeepExt => {
                 rename_file::rename_file_keep_ext(context, backend, keymap_t)
             }
             Self::TouchFile { file_name } => touch_file::touch_file(context, file_name),
             Self::SearchGlob { pattern } => search_glob::search_glob(context, pattern.as_str()),
+            Self::SearchRegex { pattern } => search_regex::search_regex(context, pattern.as_str()),
             Self::SearchString { pattern } => {
                 search_string::search_string(context, pattern.as_str(), false);
                 Ok(())
@@ -106,9 +119,19 @@ impl AppExecute for Command {
             Self::SearchNext => search::search_next(context),
             Self::SearchPrev => search::search_prev(context),
 
-            Self::SelectFiles { pattern, options } => {
-                select::select_files(context, pattern.as_str(), options)
+            Self::SelectGlob { pattern, options } => {
+                select_glob::select_glob(context, pattern, options)
             }
+            Self::SelectRegex { pattern, options } => {
+                select_regex::select_regex(context, pattern, options)
+            }
+            Self::SelectString { pattern, options } => {
+                select_string::select_string(context, pattern, options)
+            }
+            Self::SetCaseSensitivity {
+                case_sensitivity,
+                set_type,
+            } => case_sensitivity::set_case_sensitivity(context, *case_sensitivity, *set_type),
             Self::SetMode => set_mode::set_mode(context, backend),
             Self::ShowTasks => show_tasks::show_tasks(context, backend, keymap_t),
             Self::Sort(t) => sort::set_sort(context, *t),
@@ -124,19 +147,26 @@ impl AppExecute for Command {
                 numbered_command::numbered_command(context, backend, keymap_t, *initial)
             }
 
-            Self::Filter { pattern } => filter::filter(context, pattern.as_str()),
+            Self::FilterGlob { pattern } => filter_glob::filter_glob(context, pattern.as_str()),
+            Self::FilterRegex { pattern } => filter_regex::filter_regex(context, pattern.as_str()),
+            Self::FilterString { pattern } => {
+                filter_string::filter_string(context, pattern.as_str())
+            }
 
             Self::ToggleHiddenFiles => show_hidden::toggle_hidden(context),
 
+            Self::SetTabBarDisplayMode(mode) => {
+                tab_bar_mode::set_tab_bar_display_mode(context, mode)
+            }
             Self::TabSwitch { offset } => {
-                tab_ops::tab_switch(context, *offset)?;
-                Ok(())
+                tab_ops::tab_switch(context, *offset).map_err(|e| e.into())
             }
             Self::TabSwitchIndex { index } => tab_ops::tab_switch_index(context, *index),
             Self::Help => show_help::help_loop(context, backend, keymap_t),
 
             Self::SearchFzf => search_fzf::search_fzf(context, backend),
             Self::SubdirFzf => subdir_fzf::subdir_fzf(context, backend),
+            Self::SelectFzf { options } => select_fzf::select_fzf(context, backend, options),
             Self::Zoxide(arg) => zoxide::zoxide_query(context, arg),
             Self::ZoxideInteractive => zoxide::zoxide_query_interactive(context, backend),
 

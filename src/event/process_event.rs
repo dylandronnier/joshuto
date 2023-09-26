@@ -8,8 +8,10 @@ use termion::event::{Event, Key, MouseButton, MouseEvent};
 use uuid::Uuid;
 
 use crate::commands::{cursor_move, parent_cursor_move, reload};
-use crate::config::{AppKeyMapping, KeyMapping};
+use crate::config::clean::keymap::AppKeyMapping;
+use crate::config::clean::keymap::KeyMapping;
 use crate::context::AppContext;
+use crate::error::AppResult;
 use crate::event::AppEvent;
 use crate::fs::JoshutoDirList;
 use crate::history::DirectoryHistory;
@@ -25,7 +27,7 @@ pub fn poll_event_until_simple_keybind<'a>(
     backend: &mut ui::AppBackend,
     context: &mut AppContext,
     keymap: &'a KeyMapping,
-) -> Option<&'a Command> {
+) -> Option<&'a Vec<Command>> {
     let mut keymap = keymap;
 
     context.flush_event();
@@ -39,8 +41,8 @@ pub fn poll_event_until_simple_keybind<'a>(
                     match event {
                         Event::Key(Key::Esc) => return None,
                         event => match keymap.get(&event) {
-                            Some(CommandKeybind::SimpleKeybind(s)) => {
-                                return Some(s);
+                            Some(CommandKeybind::SimpleKeybind { commands, .. }) => {
+                                return Some(commands);
                             }
                             Some(CommandKeybind::CompositeKeybind(m)) => {
                                 keymap = m;
@@ -88,10 +90,7 @@ pub fn process_worker_progress(context: &mut AppContext, res: FileOperationProgr
     worker_context.update_msg();
 }
 
-pub fn process_finished_worker(
-    context: &mut AppContext,
-    res: std::io::Result<FileOperationProgress>,
-) {
+pub fn process_finished_worker(context: &mut AppContext, res: AppResult<FileOperationProgress>) {
     let worker_context = context.worker_context_mut();
     let observer = worker_context.remove_worker().unwrap();
     let options = context.config_ref().display_options_ref().clone();

@@ -1,6 +1,10 @@
-[![Linux build](https://github.com/kamiyaa/joshuto/actions/workflows/rust-linux-main.yml/badge.svg)](https://github.com/kamiyaa/joshuto/actions/workflows/rust-linux-main.yml)
+[![Linux build](https://github.com/kamiyaa/joshuto/actions/workflows/rust-linux-main.yml/badge.svg)](https://github.com/kamiyaa/joshuto/actions/workflows/rust-linux-main.yml?branch=main)
 
-[![MacOS build](https://github.com/kamiyaa/joshuto/actions/workflows/rust-macos-main.yml/badge.svg)](https://github.com/kamiyaa/joshuto/actions/workflows/rust-macos-main.yml)
+[![MacOS build](https://github.com/kamiyaa/joshuto/actions/workflows/rust-macos-main.yml/badge.svg)](https://github.com/kamiyaa/joshuto/actions/workflows/rust-macos-main.yml?branch=main)
+
+<a href="https://discord.gg/2spSCCca4Q" target="_blank">
+  <img src="https://discordapp.com/api/guilds/1146271335803277394/widget.png?style=shield">
+</a>
 
 # joshuto
 
@@ -44,6 +48,42 @@ Also see [Cargo.toml](Cargo.toml)
 ~# cargo install --path=. --force --root=/usr/local     # /usr also works
 ```
 
+#### From pre-compiled binary
+
+Dependencies:
+- curl
+- openssl
+
+##### Latest release
+
+Installs the latest version using the default installation path (_$HOME/.local/bin/_).
+
+``` bash
+~$ bash <(curl -s https://raw.githubusercontent.com/kamiyaa/joshuto/master/utils/install.sh)
+```
+
+##### Custom Installation path
+
+Allows you to install Joshuto to a custom directory by setting the INSTALL_PREFIX variable.
+
+``` bash
+~$ INSTALL_PREFIX="$HOME" bash <(curl -s https://raw.githubusercontent.com/kamiyaa/joshuto/master/utils/install.sh)
+```
+
+##### System wide
+
+``` bash
+~# INSTALL_PREFIX="/usr/local/bin" bash <(curl -s https://raw.githubusercontent.com/kamiyaa/joshuto/master/utils/install.sh)
+```
+
+##### Specific release
+
+Installs a specific release version of Joshuto by the desired version number.
+
+``` bash
+~$ RELEASE_VER='v0.9.4' bash <(curl -s https://raw.githubusercontent.com/kamiyaa/joshuto/master/utils/install.sh)
+```
+
 #### Packaging status
 
 ##### Fedora ([COPR](https://copr.fedorainfracloud.org/coprs/atim/joshuto/))
@@ -62,6 +102,22 @@ sudo dnf install joshuto
 ```
 
 - [build from source](https://aur.archlinux.org/packages/joshuto-git)
+
+```
+[yay/paru] -S joshuto-git
+```
+
+##### Arch ([archlinuxcn](https://github.com/archlinuxcn/repo/))
+
+- [stable version (x86_64)](https://github.com/archlinuxcn/repo/tree/master/archlinuxcn/joshuto)
+- [stable version (aarch64)](https://github.com/archlinuxcn/repo/tree/master/alarm/joshuto)
+
+```
+[yay/paru] -S joshuto
+```
+
+- [latest git version (x86_64)](https://github.com/archlinuxcn/repo/tree/master/archlinuxcn/joshuto-git)
+- [latest git version (aarch64)](https://github.com/archlinuxcn/repo/tree/master/alarm/joshuto-git)
 
 ```
 [yay/paru] -S joshuto-git

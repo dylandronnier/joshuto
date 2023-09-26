@@ -1,24 +1,48 @@
-use globset::Glob;
-
-use crate::config::option::SelectOption;
-use crate::context::AppContext;
-use crate::error::JoshutoResult;
+use crate::context::{AppContext, MatchContext};
+use crate::error::AppResult;
 
 use super::cursor_move;
 
+#[derive(Clone, Copy, Debug)]
+pub struct SelectOption {
+    pub toggle: bool,
+    pub all: bool,
+    pub reverse: bool,
+}
+
+impl std::default::Default for SelectOption {
+    fn default() -> Self {
+        Self {
+            toggle: true,
+            all: false,
+            reverse: false,
+        }
+    }
+}
+
+impl std::fmt::Display for SelectOption {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "--toggle={} --all={} --deselect={}",
+            self.toggle, self.all, self.reverse
+        )
+    }
+}
+
 pub fn select_files(
     context: &mut AppContext,
-    pattern: &str,
+    pattern: &MatchContext,
     options: &SelectOption,
-) -> JoshutoResult {
-    if pattern.is_empty() {
+) -> AppResult {
+    if pattern.is_none() {
         select_without_pattern(context, options)
     } else {
         select_with_pattern(context, pattern, options)
     }
 }
 
-fn select_without_pattern(context: &mut AppContext, options: &SelectOption) -> JoshutoResult {
+fn select_without_pattern(context: &mut AppContext, options: &SelectOption) -> AppResult {
     if options.all {
         if let Some(curr_list) = context.tab_context_mut().curr_tab_mut().curr_list_mut() {
             curr_list.iter_mut().for_each(|e| {
@@ -51,16 +75,14 @@ fn select_without_pattern(context: &mut AppContext, options: &SelectOption) -> J
 
 fn select_with_pattern(
     context: &mut AppContext,
-    pattern: &str,
+    pattern: &MatchContext,
     options: &SelectOption,
-) -> JoshutoResult {
-    let glob = Glob::new(pattern)?.compile_matcher();
-
+) -> AppResult {
     if let Some(curr_list) = context.tab_context_mut().curr_tab_mut().curr_list_mut() {
         let mut found = 0;
         curr_list
             .iter_mut()
-            .filter(|e| glob.is_match(e.file_name()))
+            .filter(|e| pattern.is_match(e.file_name()))
             .for_each(|e| {
                 found += 1;
                 if options.reverse {

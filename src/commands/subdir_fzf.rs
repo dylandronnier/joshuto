@@ -1,35 +1,19 @@
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
 
 use crate::context::AppContext;
-use crate::error::JoshutoResult;
+use crate::error::AppResult;
 use crate::ui::AppBackend;
 
 use super::change_directory::change_directory;
+use super::fzf;
 
-pub fn subdir_fzf(context: &mut AppContext, backend: &mut AppBackend) -> JoshutoResult {
-    backend.terminal_drop();
-
-    let fzf = Command::new("fzf").stdout(Stdio::piped()).spawn()?;
-
-    let fzf_output = fzf.wait_with_output();
-
-    match fzf_output {
-        Ok(output) if output.status.success() => {
-            if let Ok(selected) = std::str::from_utf8(&output.stdout) {
-                let path: PathBuf = PathBuf::from(selected);
-                fzf_change_dir(context, path.as_path())?;
-            }
-        }
-        _ => {}
-    }
-
-    backend.terminal_restore()?;
-
-    Ok(())
+pub fn subdir_fzf(context: &mut AppContext, backend: &mut AppBackend) -> AppResult {
+    let fzf_output = fzf::fzf(context, backend, Vec::new())?;
+    let path: PathBuf = PathBuf::from(fzf_output);
+    fzf_change_dir(context, path.as_path())
 }
 
-pub fn fzf_change_dir(context: &mut AppContext, path: &Path) -> JoshutoResult {
+pub fn fzf_change_dir(context: &mut AppContext, path: &Path) -> AppResult {
     if path.is_dir() {
         change_directory(context, path)?;
     } else if let Some(parent) = path.parent() {
