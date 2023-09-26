@@ -14,7 +14,6 @@ mod traits;
 mod ui;
 mod util;
 
-use config::icons::Icons;
 use lazy_static::lazy_static;
 use std::fs::File;
 use std::io::prelude::*;
@@ -24,9 +23,10 @@ use std::sync::Mutex;
 use structopt::StructOpt;
 
 use crate::commands::quit::QuitAction;
+
 use crate::config::{
-    AppConfig, AppKeyMapping, AppProgramRegistry, AppTheme, Bookmarks, JoshutoPreview,
-    TomlConfigFile,
+    icons::Icons, AppConfig, AppKeyMapping, AppProgramRegistry, AppTheme, Bookmarks,
+    JoshutoPreview, TomlConfigFile,
 };
 use crate::context::AppContext;
 use crate::error::JoshutoError;
@@ -77,6 +77,15 @@ lazy_static! {
     static ref HOME_DIR: Option<PathBuf> = dirs_next::home_dir();
     static ref USERNAME: String = whoami::username();
     static ref HOSTNAME: String = whoami::hostname();
+
+    static ref TIMEZONE_STR: String = {
+        let offset = chrono::Local::now().offset().local_minus_utc() / 3600;
+        if offset.is_positive() {
+            format!(" UTC+{} ", offset.abs())
+        } else {
+            format!(" UTC-{} ", offset.abs())
+        }
+    };
 }
 
 #[derive(Clone, Debug, StructOpt)]

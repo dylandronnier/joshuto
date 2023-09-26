@@ -1,7 +1,7 @@
 use std::time;
 
 pub fn file_size_to_string(file_size: u64) -> String {
-    const FILE_UNITS: [&str; 6] = ["B", "K", "M", "G", "T", "E"];
+    const FILE_UNITS: [&str; 6] = ["B", "K", "M", "G", "T", "P"];
     const CONV_RATE: f64 = 1024.0;
     let mut file_size: f64 = file_size as f64;
 
@@ -23,6 +23,6 @@ pub fn file_size_to_string(file_size: u64) -> String {
 pub fn mtime_to_string(mtime: time::SystemTime) -> String {
     const MTIME_FORMATTING: &str = "%Y-%m-%d %H:%M";
 
-    let datetime: chrono::DateTime<chrono::offset::Utc> = mtime.into();
+    let datetime: chrono::DateTime<chrono::offset::Local> = mtime.into();
     datetime.format(MTIME_FORMATTING).to_string()
 }
